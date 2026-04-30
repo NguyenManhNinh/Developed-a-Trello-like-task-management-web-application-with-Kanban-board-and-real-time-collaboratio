@@ -20,8 +20,9 @@ import { cloneDeep, isEmpty } from 'lodash';
 import Column from './ListColumns/Column/Column';
 import Card from './ListColumns/Column/ListCards/Card/Card';
 import { generatePlaceholderCard } from '~/utilities/formatters';
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import { selectBoardFilters } from '~/redux/board/boardFilterSlice'
+import { moveColumn, moveCardSameColumn, moveCardDifferentColumn } from '~/redux/board/boardSlice'
 
 
 const ACTIVE_DRAG_ITEM_TYPE = {
@@ -40,10 +41,11 @@ function BoardContent({ board,
   moveColumnToPosition,
   backgroundColor
 }) {
+  const dispatch = useDispatch()
   // const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 10 } })
   const mouseSensor = useSensor(MouseSensor, { activationConstraint: { distance: 10 } })
   const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 500 } })
-  // Ưu tiên sử dụng Mouse và Touch sensor để có trải nghiệm mobile tốt nhất
+  // Ưu tiên sử dụng Mouse và Touch sensor cho mobile tốt nhất
   const sensors = useSensors(mouseSensor, touchSensor)
   const [orderedColumns, setOrderedColumns] = useState([]);
   const filters = useSelector(selectBoardFilters)
@@ -178,6 +180,17 @@ function BoardContent({ board,
       }
       //Nếu Func này được goi từ handleDragend nghĩa là đã kéo xong,lúc này mới xử lý gọi Api 1 lần ở đây
       if (triggerFrom === 'handleDragend') {
+        // Dispatch Redux action for DevTools visibility
+        dispatch(moveCardDifferentColumn({
+          fromColumnId: oldColumnWhenDraggingCard._id,
+          toColumnId: nextOverColumn._id,
+          cardId: activeDraggingCardId,
+          newFromCardOrderIds: nextActiveColumn.cardOrderIds,
+          newFromCards: nextActiveColumn.cards,
+          newToCardOrderIds: nextOverColumn.cardOrderIds,
+          newToCards: nextOverColumn.cards
+        }))
+
         moveCardToDifferentColumn(
           activeDraggingCardId,
           oldColumnWhenDraggingCard._id,
@@ -283,6 +296,16 @@ function BoardContent({ board,
           }
           return nextColumns;
         });
+
+        // Dispatch Redux action for DevTools visibility
+        dispatch(moveCardSameColumn({
+          columnId: oldColumnWhenDraggingCard._id,
+          fromIndex: oldCardIndex,
+          toIndex: newCardIndex,
+          newCardOrderIds: dndOrderCardIds,
+          newCards: dndOrderedCards
+        }))
+
         moveCardInTheSameColumn(dndOrderedCards, dndOrderCardIds, oldColumnWhenDraggingCard._id);
       }
     }
@@ -294,6 +317,13 @@ function BoardContent({ board,
         const dndOrderedColumns = arrayMove(orderedColumns, oldColumnIndex, newColumnIndex);
         //Cập nhật lại thứ tự cột sau khi drag and drop
         setOrderedColumns(dndOrderedColumns);
+
+        // Dispatch Redux action for DevTools visibility
+        dispatch(moveColumn({
+          fromIndex: oldColumnIndex,
+          toIndex: newColumnIndex
+        }))
+
         moveColumns(dndOrderedColumns);
       }
     }

@@ -47,7 +47,7 @@ services:
       - api
     networks:
       - trello-network
- 
+
 networks:
   trello-network:
     driver: bridge
